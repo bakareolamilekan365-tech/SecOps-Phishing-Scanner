@@ -1,0 +1,17 @@
+# Python Virtual Environments
+venv/
+env/
+.venv/
+
+# Cache
+__pycache__/
+*.pyc
+
+# Machine Learning Models & Large Datasets
+# Notice: dataset.csv is NOT ignored! It is kept small so it can be pushed.
+raw_dataset_small.csv
+phishurl-list.csv
+*.joblib
+
+# VS Code settings
+.vscode/
