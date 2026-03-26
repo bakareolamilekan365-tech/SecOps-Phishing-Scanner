@@ -5,3 +5,6 @@ joblib
 tldextract
 requests
 gunicorn
+xgboost
+python-Levenshtein
+python-whois

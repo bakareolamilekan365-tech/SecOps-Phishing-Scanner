@@ -1,19 +1,47 @@
-def extract_features(url):
+import math
+import re
+import whois
+import tldextract
+from datetime import datetime
+import warnings
+
+warnings.filterwarnings("ignore", module="whois")
+
+def calculate_entropy(text):
+    if not text: return 0
+    entropy = 0
+    for x in set(text):
+        p_x = float(text.count(x)) / len(text)
+        entropy += - p_x * math.log(p_x, 2)
+    return entropy
+
+def get_domain_age(url):
+    try:
+        ext = tldextract.extract(url)
+        domain = f"{ext.domain}.{ext.suffix}"
+        w = whois.whois(domain)
+        creation_date = w.creation_date
+        if type(creation_date) is list:
+            creation_date = creation_date[0]
+        if creation_date:
+            if isinstance(creation_date, str):
+                try:
+                    creation_date = datetime.strptime(creation_date, "%Y-%m-%d")
+                except:
+                    return -1
+            return (datetime.now() - creation_date).days
+    except Exception:
+        pass
+    return -1
+
+def extract_features(url, fast_mode=False):
     url_lower = url.lower()
-    
-    # 1. URL Length (Phishing usually longer)
+
     url_length = len(url)
-    
-    # 2. Count of dots '.' (Subdomains)
     dot_count = url.count('.')
-    
-    # 3. Presence of hyphen '-' (Domain squatting)
     has_hyphen = 1 if '-' in url else 0
-    
-    # 4. Presence of https
     has_https = 1 if url.startswith('https://') else 0
-    
-    # 5. [NEW] Suspicious keywords
+
     suspicious_words = [
         'login', 'secure', 'verify', 'account', 'update', 'banking', 'auth',
         'support', 'service', 'helpdesk', 'recovery', 'billing', 'admin', 'security',
@@ -22,29 +50,33 @@ def extract_features(url):
     ]
     has_suspicious = 1 if any(word in url_lower for word in suspicious_words) else 0
 
-    # 6. [NEW] Targeted Brand Typos / Squats
     typo_brands = [
         'paypai', 'bank-ofamerica', 'apple-support', 'microsoft-update',
         'micro-soft', 'rnicrosoft', 'appIe', 'chase-secure', 'g00gle', 'gooogle', 'amaz0n', 'amz'
     ]
     has_typo = 1 if any(word in url_lower for word in typo_brands) else 0
 
-    # 7. [NEW] Known Safe Brand Name (forces the model to trust major domains)
     safe_brands = [
         'google', 'facebook', 'youtube', 'amazon', 'apple', 'microsoft',
         'netflix', 'github', 'twitter', 'linkedin', 'instagram', 'paypal', 'coinbase',
-        'chowdeck', 'paystack', 'jumia', 'kuda', 'flutterwave', 'opay', 'moniepoint', 
-        'chippercash', 'konga', 'shopee', 'flipkart', 'lazada', 'grab', 'gojek', 
-        'zomato', 'swiggy', 'paytm', 'mercadolibre', 'nubank', 'rappi', 'ifood', 
+        'chowdeck', 'paystack', 'jumia', 'kuda', 'flutterwave', 'opay', 'moniepoint',
+        'chippercash', 'konga', 'shopee', 'flipkart', 'lazada', 'grab', 'gojek',
+        'zomato', 'swiggy', 'paytm', 'mercadolibre', 'nubank', 'rappi', 'ifood',
         'pagseguro', 'revolut', 'monzo', 'n26', 'klarna', 'deliveroo', 'zalando'
     ]
     safe_brand_present = 1 if any(f"/{brand}." in url_lower or f".{brand}." in url_lower or f"//{brand}." in url_lower for brand in safe_brands) else 0
 
-    # 8. [NEW] High-risk Top Level Domains (gTLDs often used by scammers)
     high_risk_tlds = ['.top', '.xyz', '.loan', '.click', '.win', '.vip', '.site', '.online', '.buzz', '.info']
     has_risky_tld = 1 if any(url_lower.endswith(tld) or (tld + '/') in url_lower for tld in high_risk_tlds) else 0
 
-    # 9. [NEW] Checking for unencrypted HTTP
     is_http = 1 if url.startswith('http://') else 0
 
-    return [url_length, dot_count, has_hyphen, has_https, has_suspicious, has_typo, safe_brand_present, has_risky_tld, is_http]
+    ext = tldextract.extract(url)
+    domain_name = ext.domain
+    entropy = calculate_entropy(domain_name)
+
+    has_at_symbol = 1 if '@' in url else 0
+
+    domain_age_days = -1 if fast_mode else get_domain_age(url)
+
+    return [url_length, dot_count, has_hyphen, has_https, has_suspicious, has_typo, safe_brand_present, has_risky_tld, is_http, entropy, has_at_symbol, domain_age_days]

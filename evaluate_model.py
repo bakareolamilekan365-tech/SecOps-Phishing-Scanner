@@ -42,7 +42,7 @@ def test_on_real_phishing_db():
     print("="*90)
     
     for url in test_urls:
-        features = extract_features(url)
+        features = extract_features(url, fast_mode=True)
         features_array = np.array(features).reshape(1, -1)
         
         pred = model.predict(features_array)[0]
