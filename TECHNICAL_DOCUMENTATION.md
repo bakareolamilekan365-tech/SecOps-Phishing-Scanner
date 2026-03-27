@@ -97,6 +97,21 @@ graph LR
     Admin -->|manages| QML
 ```
 
+### 3.3 Data Flow Diagram (Level 1)
+
+```mermaid
+flowchart TD
+    A[Raw URL String] --> B(Input Sanitization Layer)
+    B --> C{Schema Valid?}
+    C -->|No| D[Reject Request]
+    C -->|Yes| E(Feature Extractor)
+    E --> F[12-Dimensional Vector]
+    F --> G(Random Forest + XGBoost)
+    G --> H[Threat Probability Score]
+    H --> I(Rule Engine Override)
+    I --> J[Final Verdict: Safe / Caution / Phishing]
+```
+
 ## 4. Input Normalization Strategy
 
 The backend accepts raw user entries and canonicalizes input before inference.

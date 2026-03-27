@@ -44,6 +44,59 @@ The system returns naturalized confidence scores reflecting the model's actual c
 
 **Note:** Scores are dynamic and reflect the actual machine learning probability output, not arbitrary bins. The model can return any value in this spectrum.
 
+## System Diagrams
+
+### Request / Response Sequence
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant F as Frontend (main.js)
+    participant B as Flask Backend (app.py)
+    participant M as Ensemble Model (joblib)
+    participant L as Flat Log (scan_history)
+
+    U->>F: Enters URL & Clicks Scan
+    F->>B: POST /predict {url}
+    B->>B: Normalize URL & Check SSRF
+    B->>M: extract_features()
+    M-->>B: return [confidence_score, verdict]
+    B->>L: append to scan_history.log
+    B-->>F: JSON Response (Verdict + Bio)
+    F-->>U: Update UI with Threat Breakdown
+```
+
+### Data Flow (Level 1)
+
+```mermaid
+flowchart TD
+    A[Raw URL String] --> B(Input Sanitization Layer)
+    B --> C{Schema Valid?}
+    C -->|No| D[Reject Request]
+    C -->|Yes| E(Feature Extractor)
+    E --> F[12-Dimensional Vector]
+    F --> G(Random Forest + XGBoost)
+    G --> H[Threat Probability Score]
+    H --> I(Rule Engine Override)
+    I --> J[Final Verdict: Safe / Caution / Phishing]
+```
+
+### Use Case Overview
+
+```mermaid
+graph LR
+    User((User))
+    Admin((Admin))
+
+    User --> SUB[Submit Suspicious URL]
+    User --> VIEW[View Threat Analysis]
+    Admin --> REVIEW[Review scan_history.log]
+
+    SUB -->|includes| EXT[Extract Features]
+    EXT -->|includes| QML[Query ML Model]
+    Admin -->|manages| QML
+```
+
 ## Getting Started
 
 1. `pip install -r requirements.txt`
