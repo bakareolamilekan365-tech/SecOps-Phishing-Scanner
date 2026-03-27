@@ -290,6 +290,52 @@ Recommended production additions:
 - Correlation IDs per request.
 - Metrics for false-positive/false-negative trend analysis.
 
+### 11.1 Entity-Relationship Diagram (Logical Record Model)
+
+Each line appended to `scan_history.log` represents one `SCAN_RECORD` entity. The ERD below
+documents the logical fields captured per scan event, including the relationship to optional
+user-submitted `FEEDBACK_RECORD` entries written via `POST /feedback`.
+
+```mermaid
+erDiagram
+    SCAN_RECORD {
+        string timestamp PK
+        string raw_url
+        string normalized_url
+        float  confidence_score
+        string verdict
+        string threat_flags
+    }
+
+    FEEDBACK_RECORD {
+        string timestamp PK
+        string url
+        string user_label
+        string note
+        string model_prediction
+        float  model_confidence
+        bool   is_known_domain
+        bool   model_uncertain
+    }
+
+    SCAN_RECORD ||--o| FEEDBACK_RECORD : "may trigger"
+```
+
+### 11.2 Flat-Log Justification
+
+A relational database is deliberately not used. Rationale:
+
+- **Deployment simplicity:** The scanner runs as a single-process Flask app with no external
+  service dependencies. A flat append-only log requires zero infrastructure.
+- **Auditability:** Plain-text log lines are human-readable, grep-able, and can be ingested
+  directly into any SIEM or log-aggregation pipeline (Splunk, ELK, CloudWatch) without
+  schema migrations.
+- **SOC / education scope:** The primary use case is single-operator or lab deployment where
+  query volume is low. SQL overhead is not justified.
+- **Upgrade path:** If query volume grows, the `SCAN_RECORD` entity definition above provides
+  an exact schema blueprint to migrate into SQLite, PostgreSQL, or a document store with no
+  logic changes to `app.py`.
+
 ## 12. Developer Workflow
 
 Typical local workflow:

@@ -97,6 +97,33 @@ graph LR
     Admin -->|manages| QML
 ```
 
+### Entity-Relationship Diagram (Scan Record Model)
+
+```mermaid
+erDiagram
+    SCAN_RECORD {
+        string timestamp PK
+        string raw_url
+        string normalized_url
+        float  confidence_score
+        string verdict
+        string threat_flags
+    }
+
+    FEEDBACK_RECORD {
+        string timestamp PK
+        string url
+        string user_label
+        string note
+        string model_prediction
+        float  model_confidence
+        bool   is_known_domain
+        bool   model_uncertain
+    }
+
+    SCAN_RECORD ||--o| FEEDBACK_RECORD : "may trigger"
+```
+
 ## Getting Started
 
 1. `pip install -r requirements.txt`
