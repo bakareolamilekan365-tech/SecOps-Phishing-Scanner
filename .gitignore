@@ -14,3 +14,11 @@ phishurl-list.csv
 
 # VS Code settings
 .vscode/
+
+# Local testing and documentation (do not push to Github)
+bot_test.py
+batch_test_phish.py
+SECOPS_BRIEF.md
+TECHNICAL_DOCS.md
+logs/user_feedback_queue.jsonl
+logs/*.log

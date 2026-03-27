@@ -62,7 +62,15 @@ def extract_features(url, fast_mode=False):
         'chowdeck', 'paystack', 'jumia', 'kuda', 'flutterwave', 'opay', 'moniepoint',
         'chippercash', 'konga', 'shopee', 'flipkart', 'lazada', 'grab', 'gojek',
         'zomato', 'swiggy', 'paytm', 'mercadolibre', 'nubank', 'rappi', 'ifood',
-        'pagseguro', 'revolut', 'monzo', 'n26', 'klarna', 'deliveroo', 'zalando'
+        'pagseguro', 'revolut', 'monzo', 'n26', 'klarna', 'deliveroo', 'zalando',
+        'whatsapp', 'tiktok', 'twitch', 'reddit', 'meta', 'spotify', 'telegram',
+        'discord', 'snapchat', 'pinterest', 'roblox', 'canva', 'flickr',
+        'skyscanner', 'booking', 'vinted', 'adobe', 'ikea', 'decathlon', 'asos',
+        'airbnb', 'bbc', 'cnn', 'nytimes', 'aljazeera', 'mtn', 'airtel', 'glo',
+        'safaricom', 'mpesa', 'dstv', 'showmax', 'jiji', 'kikuu', 'gtbank',
+        'firstbanknigeria', 'accessbankplc', 'ubagroup', 'stanbicibtc', 'fcmb',
+        'fidelitybank', 'ecobank', 'kcb', 'equitybank', 'standardbank', 'nedbank',
+        'capitecbank', 'absa', 'fnb'
     ]
     safe_brand_present = 1 if any(f"/{brand}." in url_lower or f".{brand}." in url_lower or f"//{brand}." in url_lower for brand in safe_brands) else 0
 
