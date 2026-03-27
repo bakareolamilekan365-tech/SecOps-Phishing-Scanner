@@ -48,6 +48,8 @@ The system returns naturalized confidence scores reflecting the model's actual c
 
 ### Request / Response Sequence
 
+> 📥 Download: [sequence-diagram.png](docs/diagrams/sequence-diagram.png)
+
 ```mermaid
 sequenceDiagram
     participant U as User
@@ -68,6 +70,8 @@ sequenceDiagram
 
 ### Data Flow (Level 1)
 
+> 📥 Download: [dfd-diagram.png](docs/diagrams/dfd-diagram.png)
+
 ```mermaid
 flowchart TD
     A[Raw URL String] --> B(Input Sanitization Layer)
@@ -82,6 +86,8 @@ flowchart TD
 ```
 
 ### Use Case Overview
+
+> 📥 Download: [usecase-diagram.png](docs/diagrams/usecase-diagram.png)
 
 ```mermaid
 graph LR
@@ -98,6 +104,8 @@ graph LR
 ```
 
 ### Entity-Relationship Diagram (Scan Record Model)
+
+> 📥 Download: [erd-diagram.png](docs/diagrams/erd-diagram.png)
 
 ```mermaid
 erDiagram
