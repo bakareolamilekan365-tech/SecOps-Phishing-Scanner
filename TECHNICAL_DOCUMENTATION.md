@@ -61,6 +61,42 @@ The scanner is a hybrid AI + heuristic web application:
 10. Optional user feedback is submitted to /feedback for review queueing.
 11. Scan event is logged for audit and analysis.
 
+### 3.1 Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant F as Frontend (main.js)
+    participant B as Flask Backend (app.py)
+    participant M as Ensemble Model (joblib)
+    participant L as Flat Log (scan_history)
+
+    U->>F: Enters URL & Clicks Scan
+    F->>B: POST /predict {url}
+    B->>B: Normalize URL & Check SSRF
+    B->>M: extract_features()
+    M-->>B: return [confidence_score, verdict]
+    B->>L: append to scan_history.log
+    B-->>F: JSON Response (Verdict + Bio)
+    F-->>U: Update UI with Threat Breakdown
+```
+
+### 3.2 Use Case Diagram
+
+```mermaid
+graph LR
+    User((User))
+    Admin((Admin))
+
+    User --> SUB[Submit Suspicious URL]
+    User --> VIEW[View Threat Analysis]
+    Admin --> REVIEW[Review scan_history.log]
+
+    SUB -->|includes| EXT[Extract Features]
+    EXT -->|includes| QML[Query ML Model]
+    Admin -->|manages| QML
+```
+
 ## 4. Input Normalization Strategy
 
 The backend accepts raw user entries and canonicalizes input before inference.
