@@ -103,6 +103,44 @@ weighted avg       1.00      1.00      1.00     17000
 
 ---
 
+## Operational .net Benchmark (Live Render)
+
+Endpoint tested: `https://secops-phishing-scanner-feature.onrender.com/predict`
+
+### Test Set
+
+- Known-good `.net`: `behance.net`, `www.behance.net`, `skyscanner.net`
+- Neutral `.net`: `example.net`
+- Phishing-style `.net`: 11 brand-impersonation URLs (login/verify/security patterns)
+
+### Before Hotfix (branch state before commit `a9a852f`)
+
+| URL | Verdict | Confidence | Notes |
+|-----|---------|------------|-------|
+| `https://behance.net` | Phishing | 95.00 % | False positive |
+| `https://www.behance.net` | Phishing | 95.00 % | False positive |
+| `https://skyscanner.net` | Safe | 98.00 % | Correct |
+| `https://example.net` | Phishing | 99.99 % | Expected suspicious baseline |
+| 11 phishing-style `.net` URLs | Phishing | 99.66-99.99 % | Correct |
+
+### After Hotfix (live deploy from commit `a9a852f`)
+
+| URL | Verdict | Confidence | Notes |
+|-----|---------|------------|-------|
+| `https://behance.net` | Safe | 98.00 % | Corrected |
+| `https://www.behance.net` | Safe | 98.00 % | Corrected |
+| `https://skyscanner.net` | Safe | 98.00 % | Correct |
+| `https://example.net` | Phishing | 99.99 % | Unchanged |
+| 11 phishing-style `.net` URLs | Phishing | 99.66-99.99 % | Unchanged |
+
+### Benchmark Delta
+
+- Known-good `.net` false positives: **2/3 -> 0/3**
+- Phishing-style `.net` detections: **11/11 -> 11/11**
+- Observed net effect: reduced false positives while preserving strong phishing catches.
+
+---
+
 ## Reproducibility Steps
 
 ```bash
