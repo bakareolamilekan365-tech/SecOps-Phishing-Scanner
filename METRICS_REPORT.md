@@ -2,14 +2,14 @@
 
 ## Overview
 
-| Item | Value |
-|------|-------|
-| Model file | `phishing_model.joblib` (VotingClassifier: RF + XGBoost + LR) |
-| Dataset | `dataset.csv` (85,000 rows) |
-| Split | 80 % train (68,000) / **20 % test (17,000)** — `random_state=42` |
-| Class labels | `0` = Safe, `1` = Phishing |
-| Test-set distribution | Safe: 11,950 · Phishing: 5,050 |
-| Script | `compute_metrics.py` |
+| Item                  | Value                                                            |
+| --------------------- | ---------------------------------------------------------------- |
+| Model file            | `phishing_model.joblib` (VotingClassifier: RF + XGBoost + LR)    |
+| Dataset               | `dataset.csv` (85,000 rows)                                      |
+| Split                 | 80 % train (68,000) / **20 % test (17,000)** — `random_state=42` |
+| Class labels          | `0` = Safe, `1` = Phishing                                       |
+| Test-set distribution | Safe: 11,950 · Phishing: 5,050                                   |
+| Script                | `compute_metrics.py`                                             |
 
 All metrics below are computed on the **held-out test split only** (20 %, never seen during training).
 
@@ -17,24 +17,24 @@ All metrics below are computed on the **held-out test split only** (20 %, never 
 
 ## Core Metrics
 
-| Metric | Value |
-|--------|-------|
-| **Accuracy** | 100.00 % |
+| Metric                   | Value    |
+| ------------------------ | -------- |
+| **Accuracy**             | 100.00 % |
 | **Precision** (weighted) | 100.00 % |
-| **Recall** (weighted) | 100.00 % |
-| **F1-score** (weighted) | 100.00 % |
-| **ROC-AUC** | 1.000000 |
+| **Recall** (weighted)    | 100.00 % |
+| **F1-score** (weighted)  | 100.00 % |
+| **ROC-AUC**              | 1.000000 |
 
 ---
 
 ## Per-Class Metrics
 
-| Class | Precision | Recall | F1-score | Support |
-|-------|-----------|--------|----------|---------|
-| **Safe (0)** | 100.00 % | 100.00 % | 100.00 % | 11,950 |
-| **Phishing (1)** | 100.00 % | 100.00 % | 100.00 % | 5,050 |
-| **Macro avg** | 100.00 % | 100.00 % | 100.00 % | 17,000 |
-| **Weighted avg** | 100.00 % | 100.00 % | 100.00 % | 17,000 |
+| Class            | Precision | Recall   | F1-score | Support |
+| ---------------- | --------- | -------- | -------- | ------- |
+| **Safe (0)**     | 100.00 %  | 100.00 % | 100.00 % | 11,950  |
+| **Phishing (1)** | 100.00 %  | 100.00 % | 100.00 % | 5,050   |
+| **Macro avg**    | 100.00 %  | 100.00 % | 100.00 % | 17,000  |
+| **Weighted avg** | 100.00 %  | 100.00 % | 100.00 % | 17,000  |
 
 ---
 
@@ -47,12 +47,12 @@ Actual Safe (0)   11,950         0
 Actual Phishing(1)     0     5,050
 ```
 
-| Cell | Count |
-|------|-------|
-| True Negatives  (TN) | 11,950 |
-| False Positives (FP) | 0 |
-| False Negatives (FN) | 0 |
-| True Positives  (TP) | 5,050 |
+| Cell                 | Count  |
+| -------------------- | ------ |
+| True Negatives (TN)  | 11,950 |
+| False Positives (FP) | 0      |
+| False Negatives (FN) | 0      |
+| True Positives (TP)  | 5,050  |
 
 ---
 
@@ -73,8 +73,8 @@ weighted avg       1.00      1.00      1.00     17000
 
 ## ROC-AUC
 
-| AUC Value | Tier |
-|-----------|------|
+| AUC Value    | Tier                                    |
+| ------------ | --------------------------------------- |
 | **1.000000** | Excellent — near-perfect discrimination |
 
 ---
@@ -115,22 +115,22 @@ Endpoint tested: `https://secops-phishing-scanner-feature.onrender.com/predict`
 
 ### Before Hotfix (branch state before commit `a9a852f`)
 
-| URL | Verdict | Confidence | Notes |
-|-----|---------|------------|-------|
-| `https://behance.net` | Phishing | 95.00 % | False positive |
-| `https://www.behance.net` | Phishing | 95.00 % | False positive |
-| `https://skyscanner.net` | Safe | 98.00 % | Correct |
-| `https://example.net` | Phishing | 99.99 % | Expected suspicious baseline |
-| 11 phishing-style `.net` URLs | Phishing | 99.66-99.99 % | Correct |
+| URL                           | Verdict  | Confidence    | Notes                        |
+| ----------------------------- | -------- | ------------- | ---------------------------- |
+| `https://behance.net`         | Phishing | 95.00 %       | False positive               |
+| `https://www.behance.net`     | Phishing | 95.00 %       | False positive               |
+| `https://skyscanner.net`      | Safe     | 98.00 %       | Correct                      |
+| `https://example.net`         | Phishing | 99.99 %       | Expected suspicious baseline |
+| 11 phishing-style `.net` URLs | Phishing | 99.66-99.99 % | Correct                      |
 
 ### After Hotfix (live deploy from commit `a9a852f`)
 
-| URL | Verdict | Confidence | Notes |
-|-----|---------|------------|-------|
-| `https://behance.net` | Safe | 98.00 % | Corrected |
-| `https://www.behance.net` | Safe | 98.00 % | Corrected |
-| `https://skyscanner.net` | Safe | 98.00 % | Correct |
-| `https://example.net` | Phishing | 99.99 % | Unchanged |
+| URL                           | Verdict  | Confidence    | Notes     |
+| ----------------------------- | -------- | ------------- | --------- |
+| `https://behance.net`         | Safe     | 98.00 %       | Corrected |
+| `https://www.behance.net`     | Safe     | 98.00 %       | Corrected |
+| `https://skyscanner.net`      | Safe     | 98.00 %       | Correct   |
+| `https://example.net`         | Phishing | 99.99 %       | Unchanged |
 | 11 phishing-style `.net` URLs | Phishing | 99.66-99.99 % | Unchanged |
 
 ### Benchmark Delta
