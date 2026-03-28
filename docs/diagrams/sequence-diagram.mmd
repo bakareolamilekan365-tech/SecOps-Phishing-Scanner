@@ -1,0 +1,15 @@
+sequenceDiagram
+    participant U as User
+    participant F as Frontend (main.js)
+    participant B as Flask Backend (app.py)
+    participant M as Ensemble Model (joblib)
+    participant L as Flat Log (scan_history)
+
+    U->>F: Enters URL & Clicks Scan
+    F->>B: POST /predict {url}
+    B->>B: Normalize URL & Check SSRF
+    B->>M: extract_features()
+    M-->>B: return [confidence_score, verdict]
+    B->>L: append to scan_history.log
+    B-->>F: JSON Response (Verdict + Bio)
+    F-->>U: Update UI with Threat Breakdown

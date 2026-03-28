@@ -3,9 +3,16 @@ import re
 import whois
 import tldextract
 from datetime import datetime
+from urllib.parse import urlparse
 import warnings
 
 warnings.filterwarnings("ignore", module="whois")
+
+# Exact domains that should not be penalized by generic lexical terms.
+EXACT_SAFE_DOMAIN_OVERRIDES = {
+    'behance.net',
+    'skyscanner.net'
+}
 
 def calculate_entropy(text):
     if not text: return 0
@@ -36,10 +43,15 @@ def get_domain_age(url):
 
 def extract_features(url, fast_mode=False):
     url_lower = url.lower()
+    ext = tldextract.extract(url)
+    registrable_domain = f"{ext.domain}.{ext.suffix}".strip('.').lower()
+    host_for_flags = ext.fqdn.lower() if ext.fqdn else registrable_domain
+    path_and_query = urlparse(url).path.lower()
+    is_exact_safe_override = registrable_domain in EXACT_SAFE_DOMAIN_OVERRIDES
 
     url_length = len(url)
     dot_count = url.count('.')
-    has_hyphen = 1 if '-' in url else 0
+    has_hyphen = 1 if '-' in host_for_flags else 0
     has_https = 1 if url.startswith('https://') else 0
 
     suspicious_words = [
@@ -48,13 +60,18 @@ def extract_features(url, fast_mode=False):
         'confirm', 'signin', 'authenticate', 'validate', 'reactivate',
         'invoice', 'payment', 'wallet', 'free', 'gift', 'winner', 'prize', 'bonus', 'claim'
     ]
-    has_suspicious = 1 if any(word in url_lower for word in suspicious_words) else 0
+    lexical_surface = f"{host_for_flags}{path_and_query}"
+    has_suspicious = 1 if any(word in lexical_surface for word in suspicious_words) else 0
 
     typo_brands = [
         'paypai', 'bank-ofamerica', 'apple-support', 'microsoft-update',
         'micro-soft', 'rnicrosoft', 'appIe', 'chase-secure', 'g00gle', 'gooogle', 'amaz0n', 'amz'
     ]
-    has_typo = 1 if any(word in url_lower for word in typo_brands) else 0
+    has_typo = 1 if any(word in lexical_surface for word in typo_brands) else 0
+
+    if is_exact_safe_override:
+        has_suspicious = 0
+        has_typo = 0
 
     safe_brands = [
         'google', 'facebook', 'youtube', 'amazon', 'apple', 'microsoft',
@@ -64,7 +81,7 @@ def extract_features(url, fast_mode=False):
         'zomato', 'swiggy', 'paytm', 'mercadolibre', 'nubank', 'rappi', 'ifood',
         'pagseguro', 'revolut', 'monzo', 'n26', 'klarna', 'deliveroo', 'zalando',
         'whatsapp', 'tiktok', 'twitch', 'reddit', 'meta', 'spotify', 'telegram',
-        'discord', 'snapchat', 'pinterest', 'roblox', 'canva', 'flickr',
+        'discord', 'snapchat', 'pinterest', 'roblox', 'canva', 'behance', 'flickr',
         'skyscanner', 'booking', 'vinted', 'adobe', 'ikea', 'decathlon', 'asos',
         'airbnb', 'bbc', 'cnn', 'nytimes', 'aljazeera', 'mtn', 'airtel', 'glo',
         'safaricom', 'mpesa', 'dstv', 'showmax', 'jiji', 'kikuu', 'gtbank',
@@ -79,7 +96,6 @@ def extract_features(url, fast_mode=False):
 
     is_http = 1 if url.startswith('http://') else 0
 
-    ext = tldextract.extract(url)
     domain_name = ext.domain
     entropy = calculate_entropy(domain_name)
 

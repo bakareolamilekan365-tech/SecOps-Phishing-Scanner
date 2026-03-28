@@ -44,6 +44,94 @@ The system returns naturalized confidence scores reflecting the model's actual c
 
 **Note:** Scores are dynamic and reflect the actual machine learning probability output, not arbitrary bins. The model can return any value in this spectrum.
 
+## System Diagrams
+
+### Request / Response Sequence
+
+> 📥 Download: [sequence-diagram.png](docs/diagrams/sequence-diagram.png)
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant F as Frontend (main.js)
+    participant B as Flask Backend (app.py)
+    participant M as Ensemble Model (joblib)
+    participant L as Flat Log (scan_history)
+
+    U->>F: Enters URL & Clicks Scan
+    F->>B: POST /predict {url}
+    B->>B: Normalize URL & Check SSRF
+    B->>M: extract_features()
+    M-->>B: return [confidence_score, verdict]
+    B->>L: append to scan_history.log
+    B-->>F: JSON Response (Verdict + Bio)
+    F-->>U: Update UI with Threat Breakdown
+```
+
+### Data Flow (Level 1)
+
+> 📥 Download: [dfd-diagram.png](docs/diagrams/dfd-diagram.png)
+
+```mermaid
+flowchart TD
+    A[Raw URL String] --> B(Input Sanitization Layer)
+    B --> C{Schema Valid?}
+    C -->|No| D[Reject Request]
+    C -->|Yes| E(Feature Extractor)
+    E --> F[12-Dimensional Vector]
+    F --> G(Random Forest + XGBoost)
+    G --> H[Threat Probability Score]
+    H --> I(Rule Engine Override)
+    I --> J[Final Verdict: Safe / Caution / Phishing]
+```
+
+### Use Case Overview
+
+> 📥 Download: [usecase-diagram.png](docs/diagrams/usecase-diagram.png)
+
+```mermaid
+graph LR
+    User((User))
+    Admin((Admin))
+
+    User --> SUB[Submit Suspicious URL]
+    User --> VIEW[View Threat Analysis]
+    Admin --> REVIEW[Review scan_history.log]
+
+    SUB -->|includes| EXT[Extract Features]
+    EXT -->|includes| QML[Query ML Model]
+    Admin -->|manages| QML
+```
+
+### Entity-Relationship Diagram (Scan Record Model)
+
+> 📥 Download: [erd-diagram.png](docs/diagrams/erd-diagram.png)
+
+```mermaid
+erDiagram
+    SCAN_RECORD {
+        string timestamp PK
+        string raw_url
+        string normalized_url
+        float  confidence_score
+        string verdict
+        string threat_flags
+    }
+
+    FEEDBACK_RECORD {
+        string timestamp PK
+        string url
+        string user_label
+        string note
+        string model_prediction
+        float  model_confidence
+        bool   is_known_domain
+        bool   model_uncertain
+    }
+
+    SCAN_RECORD ||--o| FEEDBACK_RECORD : "may trigger"
+```
+
 ## Getting Started
 
 1. `pip install -r requirements.txt`

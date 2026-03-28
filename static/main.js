@@ -190,6 +190,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const isPhishing = data.prediction === "Phishing";
+    const isCaption = data.prediction === "Caution";
     predictionText.textContent = data.prediction;
     confidenceText.textContent = `Confidence: ${data.confidence}%`;
 
@@ -200,6 +201,12 @@ document.addEventListener("DOMContentLoaded", () => {
       predictionText.classList.add(
         "text-red-500",
         "drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]",
+      );
+      safeActionArea.classList.add("hidden");
+    } else if (isCaption) {
+      predictionText.classList.add(
+        "text-amber-500",
+        "drop-shadow-[0_0_15px_rgba(245,158,11,0.8)]",
       );
       safeActionArea.classList.add("hidden");
     } else {
@@ -319,10 +326,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const phishingProb = isPhishing ? confidence : 100 - confidence;
     const safeProb = isPhishing ? 100 - confidence : confidence;
 
+    const legendLabelColor = isDarkMode ? "#e2e8f0" : "#0f172a";
+    
     doughnutChart = new Chart(ctx, {
       type: "doughnut",
       data: {
-        labels: ["Phishing", "Safe"],
+        labels: ["🚨 Phishing", "✅ Safe", "⚠ Caution"],
         datasets: [
           {
             data: [phishingProb, safeProb],
@@ -337,11 +346,32 @@ document.addEventListener("DOMContentLoaded", () => {
         plugins: {
           legend: {
             position: "bottom",
-            labels: { color: "#e2e8f0" },
+            labels: { 
+              color: legendLabelColor,
+              font: { size: 14, weight: "bold" },
+              padding: 15,
+              boxWidth: 18,
+            },
           },
         },
       },
     });
+    
+    // Add verdict label below chart
+    const chartContainer = document.getElementById("probability-chart").parentElement;
+    let verdictLabel = chartContainer.querySelector(".chart-verdict-label");
+    if (!verdictLabel) {
+      verdictLabel = document.createElement("div");
+      verdictLabel.className = "chart-verdict-label";
+      chartContainer.appendChild(verdictLabel);
+    }
+    
+    const labelColor = isDarkMode ? "#e2e8f0" : "#0f172a";
+    verdictLabel.style.color = labelColor;
+    verdictLabel.style.marginTop = "12px";
+    verdictLabel.style.fontSize = "14px";
+    verdictLabel.style.fontWeight = "600";
+    verdictLabel.style.textAlign = "center";
   }
 });
 
