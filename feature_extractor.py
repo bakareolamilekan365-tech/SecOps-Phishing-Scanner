@@ -64,7 +64,7 @@ def extract_features(url, fast_mode=False):
         'zomato', 'swiggy', 'paytm', 'mercadolibre', 'nubank', 'rappi', 'ifood',
         'pagseguro', 'revolut', 'monzo', 'n26', 'klarna', 'deliveroo', 'zalando',
         'whatsapp', 'tiktok', 'twitch', 'reddit', 'meta', 'spotify', 'telegram',
-        'discord', 'snapchat', 'pinterest', 'roblox', 'canva', 'flickr',
+        'discord', 'snapchat', 'pinterest', 'roblox', 'canva', 'behance', 'flickr',
         'skyscanner', 'booking', 'vinted', 'adobe', 'ikea', 'decathlon', 'asos',
         'airbnb', 'bbc', 'cnn', 'nytimes', 'aljazeera', 'mtn', 'airtel', 'glo',
         'safaricom', 'mpesa', 'dstv', 'showmax', 'jiji', 'kikuu', 'gtbank',
