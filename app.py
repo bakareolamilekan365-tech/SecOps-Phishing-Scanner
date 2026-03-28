@@ -43,7 +43,7 @@ KNOWN_BRANDS = {
     'n26': 'https://n26.com', 'klarna': 'https://klarna.com', 'deliveroo': 'https://deliveroo.co.uk',
     'zalando': 'https://zalando.com', 'spotify': 'https://spotify.com', 'telegram': 'https://t.me',
     'discord': 'https://discord.com', 'snapchat': 'https://snapchat.com', 'pinterest': 'https://pinterest.com',
-    'roblox': 'https://roblox.com', 'canva': 'https://canva.com', 'behance': 'https://behance.net', 'flickr': 'https://flickr.com',
+    'roblox': 'https://roblox.com', 'canva': 'https://canva.com', 'flickr': 'https://flickr.com',
     'skyscanner': 'https://skyscanner.net', 'booking': 'https://booking.com', 'vinted': 'https://vinted.com',
     'adobe': 'https://adobe.com', 'ikea': 'https://ikea.com', 'decathlon': 'https://decathlon.com',
     'asos': 'https://asos.com', 'airbnb': 'https://airbnb.com', 'bbc': 'https://bbc.com',
@@ -66,7 +66,7 @@ BRAND_DISPLAY_NAMES = {
     'firstbanknigeria': 'First Bank', 'accessbankplc': 'Access Bank', 'ubagroup': 'UBA Group',
     'stanbicibtc': 'Stanbic IBTC', 'fidelitybank': 'Fidelity Bank', 'standardbank': 'Standard Bank',
     'capitecbank': 'Capitec Bank', 'aljazeera': 'Al Jazeera', 'nytimes': 'The New York Times',
-    'showmax': 'Showmax', 'paypal': 'PayPal', 'moniepoint': 'Moniepoint', 'ecobank': 'EcoBank', 'behance': 'Behance'
+    'showmax': 'Showmax', 'paypal': 'PayPal', 'moniepoint': 'Moniepoint', 'ecobank': 'EcoBank'
 }
 
 MODEL_PATH = 'phishing_model.joblib'
@@ -114,14 +114,9 @@ def predict():
     
     data = request.json
     raw_url = data.get('url', '').strip()
-    demo_caution_mode = False
 
     if not raw_url:
         return jsonify({'error': 'Error: No URL provided for analysis.'}), 400
-
-    # Demo trigger for screenshot/testing workflows.
-    if re.search(r'(simulate[-_]?caution|demo[-_]?caution)', raw_url, re.IGNORECASE):
-        demo_caution_mode = True
 
     # Auto-fix missing TLDs (e.g., user types "facebook" or "zenithbank" without .com/.edu/.ng)
     clean_input = re.sub(r'^https?://', '', raw_url, flags=re.IGNORECASE).strip()
@@ -172,8 +167,7 @@ def predict():
         is_live = True
         
         # Parked Check
-        first_chunk = next(r.iter_content(2048), b'')
-        content_sample = first_chunk.decode('utf-8', errors='ignore').lower() if first_chunk else ''
+        content_sample = next(r.iter_content(2048)).decode('utf-8', errors='ignore').lower()
         if 'for sale' in content_sample or 'hugedomains' in content_sample:
             is_parked = True
         
@@ -234,18 +228,8 @@ def predict():
     # --- FIXED OVERRIDES ---
     forced_override = False
 
-    if demo_caution_mode:
-        # Deterministic demo confidence in 50-59% range for consistent screenshots.
-        demo_seed = sum(ord(c) for c in raw_url.lower()) % 10
-        demo_conf = (50 + demo_seed) / 100.0
-        prediction_num = 0
-        probabilities[0] = demo_conf
-        probabilities[1] = 1 - demo_conf
-        status = "Caution"
-        forced_override = True
-
     # Only force certainty in clear-cut dangerous cases
-    elif is_whitelisted:
+    if is_whitelisted:
         prediction_num = 0
         probabilities[0] = 0.95
         probabilities[1] = 0.05
@@ -289,11 +273,8 @@ def predict():
     # Keep the score below 100 to avoid overclaiming certainty.
     confidence = min(round(top_probability * 100, 2), 99.99)
     is_known_domain = clean_domain in KNOWN_BRANDS
-    model_uncertain = demo_caution_mode or (top_probability <= 0.60 and not forced_override)
+    model_uncertain = (top_probability <= 0.60 and not forced_override)
     threat_summary = generate_threat_summary(f_dict)
-
-    if demo_caution_mode:
-        threat_summary.insert(0, "[WARN] Demo mode active: caution flow simulated for screenshot/testing.")
     
     if is_parked: threat_summary.append("[FAIL] Domain appears to be Empty or 'Parked for Sale'.")
     if redirects_to_social: threat_summary.append("[WARN] URL suspiciously redirects directly to a social media platform.")
@@ -337,7 +318,6 @@ def predict():
         'resolved_url': resolved_url,
         'is_known_domain': is_known_domain,
         'model_uncertain': model_uncertain,
-        'demo_mode': demo_caution_mode,
         'bio': bio,
         'safe_link': safe_link,
         'is_live': is_live,
