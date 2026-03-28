@@ -75,6 +75,19 @@ try:
 except FileNotFoundError:
     model = None
 
+
+def build_known_brand_domain_suffixes():
+    domain_suffixes = set()
+    for brand_url in KNOWN_BRANDS.values():
+        parsed = urlparse(brand_url if brand_url.startswith(('http://', 'https://')) else f'https://{brand_url}')
+        ext = tldextract.extract(parsed.netloc)
+        if ext.domain and ext.suffix:
+            domain_suffixes.add((ext.domain.lower(), ext.suffix.lower()))
+    return domain_suffixes
+
+
+KNOWN_BRAND_DOMAIN_SUFFIXES = build_known_brand_domain_suffixes()
+
 def is_internal_ip(domain):
     try:
         # Strip port if present
@@ -171,13 +184,11 @@ def predict():
         r = requests.get(raw_url, headers=headers, timeout=5, allow_redirects=True, stream=True)
         is_live = True
         
-        # Parked Check
+        # Parked checks should rely on explicit indicators to avoid false positives.
         first_chunk = next(r.iter_content(2048), b'')
         content_sample = first_chunk.decode('utf-8', errors='ignore').lower() if first_chunk else ''
-        if 'for sale' in content_sample or 'hugedomains' in content_sample:
-            is_parked = True
-        
-        if len(content_sample) < 1024 and '<html' not in content_sample:
+        parked_markers = ['for sale', 'hugedomains', 'sedo', 'parkingcrew', 'buy this domain', 'domain is parked']
+        if any(marker in content_sample for marker in parked_markers):
             is_parked = True
             
         resolved_url = r.url
@@ -193,6 +204,9 @@ def predict():
     status = "Safe"
     ext = tldextract.extract(raw_url)
     clean_domain = ext.domain.lower().replace('-', '')
+    suffix = ext.suffix.lower()
+    exact_known_brand_domain = (ext.domain.lower(), suffix) in KNOWN_BRAND_DOMAIN_SUFFIXES
+    risky_path_or_query = bool(re.search(r'(login|verify|update|secure|account|password|auth|signin)', f"{parsed_url.path} {parsed_url.query}", re.IGNORECASE))
     
     # Catch classic hacker leetspeak and symbols (0->o, @->a, 1->l, 3->e, 4->a)
     sneaky_netloc = parsed_url.netloc.lower().replace('@', 'a').replace('0', 'o').replace('1', 'l').replace('3', 'e').replace('4', 'a')
@@ -251,6 +265,12 @@ def predict():
         probabilities[1] = 0.05
         status = "Safe"
         forced_override = True
+    elif exact_known_brand_domain and features[10] == 0 and not risky_path_or_query:
+        prediction_num = 0
+        probabilities[0] = 0.98
+        probabilities[1] = 0.02
+        status = "Safe"
+        forced_override = True
     elif lev_phish or is_parked or redirects_to_social:
         # Confirmed phishing via heuristics
         prediction_num = 1
@@ -264,13 +284,6 @@ def predict():
         probabilities[1] = 0.90
         probabilities[0] = 0.10
         status = "Phishing"
-        forced_override = True
-    elif clean_domain in KNOWN_BRANDS and ext.suffix in ['com', 'org', 'net', 'co.uk', 'com.br']:
-        # Exact known brand match
-        prediction_num = 0
-        probabilities[0] = 0.98
-        probabilities[1] = 0.02
-        status = "Safe"
         forced_override = True
     elif lev_caution:
         prediction_num = 0 
