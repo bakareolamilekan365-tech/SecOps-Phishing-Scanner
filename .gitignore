@@ -23,3 +23,13 @@ TECHNICAL_DOCS.md
 logs/user_feedback_queue.jsonl
 logs/*.log
 PROJECT_EVIDENCE.md
+
+# Explicit root-level local-only artifacts
+/README.md
+/METRICS_REPORT.md
+/TECHNICAL_DOCUMENTATION.md
+/UI_TESTING_REPORT.md
+/compute_metrics.py
+/test_caution_urls.py
+/docs/**
+_tmp*.py
