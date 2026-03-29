@@ -27,3 +27,8 @@ UI_TESTING_REPORT.md
 test_caution_urls.py
 compute_metrics.py
 _tmp*.py
+
+# Untrack all docs across branches (keep local only)
+docs/
+*.md
+*.mmd
