@@ -22,5 +22,8 @@ SECOPS_BRIEF.md
 TECHNICAL_DOCS.md
 logs/user_feedback_queue.jsonl
 logs/*.log
-PROJECT_EVIDENCE.mdUI_TESTING_REPORT.md
+PROJECT_EVIDENCE.md
+UI_TESTING_REPORT.md
 test_caution_urls.py
+compute_metrics.py
+_tmp*.py

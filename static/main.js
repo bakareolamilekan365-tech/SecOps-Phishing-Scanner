@@ -72,6 +72,11 @@ document.addEventListener("DOMContentLoaded", () => {
       moonIcon.classList.add("hidden");
       sunIcon.classList.remove("hidden");
     }
+
+    // Refresh chart colors after theme switch so legend text remains readable.
+    if (latestScanData && typeof latestScanData.confidence === "number") {
+      renderDoughnutChart(latestScanData.prediction, latestScanData.confidence);
+    }
   });
 
   urlInput.addEventListener("keydown", (e) => {
@@ -190,7 +195,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const isPhishing = data.prediction === "Phishing";
-    const isCaption = data.prediction === "Caution";
+    const isCaution = data.prediction === "Caution";
     predictionText.textContent = data.prediction;
     confidenceText.textContent = `Confidence: ${data.confidence}%`;
 
@@ -203,10 +208,10 @@ document.addEventListener("DOMContentLoaded", () => {
         "drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]",
       );
       safeActionArea.classList.add("hidden");
-    } else if (isCaption) {
+    } else if (isCaution) {
       predictionText.classList.add(
         "text-amber-500",
-        "drop-shadow-[0_0_15px_rgba(245,158,11,0.8)]",
+        "drop-shadow-[0_0_12px_rgba(217,137,0,0.55)]",
       );
       safeActionArea.classList.add("hidden");
     } else {
@@ -257,7 +262,7 @@ document.addEventListener("DOMContentLoaded", () => {
       threatSection.classList.add("hidden");
     }
 
-    renderDoughnutChart(isPhishing, data.confidence);
+    renderDoughnutChart(data.prediction, data.confidence);
 
     const shouldRequestFeedback = data.model_uncertain || !data.is_known_domain;
     if (shouldRequestFeedback) {
@@ -318,24 +323,41 @@ document.addEventListener("DOMContentLoaded", () => {
   feedbackSafeBtn.addEventListener("click", () => submitFeedback("safe"));
   feedbackPhishBtn.addEventListener("click", () => submitFeedback("phishing"));
 
-  function renderDoughnutChart(isPhishing, confidence) {
+  function renderDoughnutChart(prediction, confidence) {
     const ctx = document.getElementById("probability-chart").getContext("2d");
 
     if (doughnutChart) doughnutChart.destroy();
 
-    const phishingProb = isPhishing ? confidence : 100 - confidence;
-    const safeProb = isPhishing ? 100 - confidence : confidence;
+    let phishingProb = 0;
+    let safeProb = 0;
+    let cautionProb = 0;
+
+    if (prediction === "Phishing") {
+      phishingProb = confidence;
+      safeProb = 100 - confidence;
+      cautionProb = 0;
+    } else if (prediction === "Safe") {
+      phishingProb = 100 - confidence;
+      safeProb = confidence;
+      cautionProb = 0;
+    } else {
+      // For caution, center the main probability on amber and split the remainder.
+      cautionProb = confidence;
+      const remainder = Math.max(0, 100 - confidence);
+      phishingProb = remainder / 2;
+      safeProb = remainder / 2;
+    }
 
     const legendLabelColor = isDarkMode ? "#e2e8f0" : "#0f172a";
-    
+
     doughnutChart = new Chart(ctx, {
       type: "doughnut",
       data: {
-        labels: ["🚨 Phishing", "✅ Safe", "⚠ Caution"],
+        labels: ["Phishing", "Safe", "Caution"],
         datasets: [
           {
-            data: [phishingProb, safeProb],
-            backgroundColor: ["#ef4444", "#4ade80"],
+            data: [phishingProb, safeProb, cautionProb],
+            backgroundColor: ["#ef4444", "#4ade80", "#d18b00"],
             borderWidth: 0,
             hoverOffset: 4,
           },
@@ -346,7 +368,7 @@ document.addEventListener("DOMContentLoaded", () => {
         plugins: {
           legend: {
             position: "bottom",
-            labels: { 
+            labels: {
               color: legendLabelColor,
               font: { size: 14, weight: "bold" },
               padding: 15,
@@ -356,22 +378,6 @@ document.addEventListener("DOMContentLoaded", () => {
         },
       },
     });
-    
-    // Add verdict label below chart
-    const chartContainer = document.getElementById("probability-chart").parentElement;
-    let verdictLabel = chartContainer.querySelector(".chart-verdict-label");
-    if (!verdictLabel) {
-      verdictLabel = document.createElement("div");
-      verdictLabel.className = "chart-verdict-label";
-      chartContainer.appendChild(verdictLabel);
-    }
-    
-    const labelColor = isDarkMode ? "#e2e8f0" : "#0f172a";
-    verdictLabel.style.color = labelColor;
-    verdictLabel.style.marginTop = "12px";
-    verdictLabel.style.fontSize = "14px";
-    verdictLabel.style.fontWeight = "600";
-    verdictLabel.style.textAlign = "center";
   }
 });
 
