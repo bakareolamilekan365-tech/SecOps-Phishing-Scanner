@@ -32,3 +32,4 @@ _tmp*.py
 docs/
 *.md
 *.mmd
+.env
