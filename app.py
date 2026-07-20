@@ -7,6 +7,7 @@ import tldextract
 import requests
 import re
 import socket
+import concurrent.futures
 import logging
 import tldextract
 import time
@@ -43,6 +44,31 @@ def normalize_domain(url):
 # ---------- Whitelist Store ----------
 WHITELIST_FILE = "data/whitelist.json"
 WHITELIST_LOG = "logs/whitelist_changes.log"
+
+
+def resolve_domain(base):
+    """
+    Try common TLDs for a given base string (no dots) using concurrent DNS lookups.
+    Returns the first domain that resolves, or None if none work.
+    """
+    tlds = ['.com', '.org', '.net', '.edu', '.int', '.gov', '.ng']
+    socket.setdefaulttimeout(0.5)  # each lookup times out after 0.5s
+
+    def try_resolve(domain):
+        try:
+            socket.gethostbyname(domain)
+            return domain
+        except socket.error:
+            return None
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=len(tlds)) as executor:
+        futures = {executor.submit(try_resolve, base + tld): base + tld for tld in tlds}
+        for future in concurrent.futures.as_completed(futures, timeout=2.0):
+            result = future.result()
+            if result is not None:
+                return result
+
+    return None
 
 def check_safe_browsing(url):
     """Return True if URL is safe, False if malicious, None if API error."""
@@ -312,11 +338,16 @@ def predict():
     clean_input = re.sub(r'^https?://', '', raw_url, flags=re.IGNORECASE).strip()
     if '/' not in clean_input and '.' not in clean_input:
         if clean_input.lower() in KNOWN_BRANDS:
-            # Map directly to the known brand URL
             raw_url = KNOWN_BRANDS[clean_input.lower()]
+
         else:
-            # Append .com as a fallback guess
-            raw_url = clean_input + '.com'
+            # Try DNS to find the correct TLD
+            resolved = resolve_domain(clean_input.lower())
+            if resolved:
+                raw_url = resolved
+            else:
+                # Fallback to .com
+                raw_url = clean_input + '.com'
 
     # Basic schema validation
     if re.match(r'^(javascript|data):', raw_url, re.IGNORECASE):
@@ -597,29 +628,66 @@ def feedback():
         return jsonify({'error': 'Feedback rejected: label must be safe or phishing.'}), 400
 
     parsed = urlparse(raw_url if raw_url.startswith(('http://', 'https://')) else f'https://{raw_url}')
-    
-    # Use normalize_domain() with fallback
-    try:
-        normalized_domain = normalize_domain(parsed.geturl())
-    except Exception:
-        normalized_domain = tldextract.extract(parsed.geturl()).domain.lower().replace('-', '')
+    normalized_domain = normalize_domain(parsed.geturl())
 
+    # If already whitelisted, skip
+    if normalized_domain in whitelist:
+        return jsonify({
+            'ok': True,
+            'message': f'ℹ️ {normalized_domain} is already whitelisted.',
+            'whitelist_added': False
+        })
+
+    # Verify with Google Safe Browsing
+    google_result = check_safe_browsing(parsed.geturl())
+    google_says_safe = google_result is True
+    google_says_malicious = google_result is False
+    google_unavailable = google_result is None
+
+    whitelist_added = False
+    extra_message = ""
+
+    if user_label == "safe" and google_says_safe:
+        whitelist.append(normalized_domain)
+        save_whitelist(whitelist)
+        audit_whitelist('add', normalized_domain, by='feedback', source='ui',
+                        notes='User marked safe, Google verified')
+        whitelist_added = True
+        extra_message = f"✅ {normalized_domain} added to whitelist (verified safe by Google)."
+
+    elif user_label == "safe" and google_says_malicious:
+        extra_message = f"⚠️ User marked Safe but Google says Malicious — not whitelisted."
+
+    elif user_label == "phishing" and google_says_malicious:
+        extra_message = f"⚠️ {normalized_domain} confirmed as phishing (verified by Google)."
+
+    elif user_label == "phishing" and google_says_safe:
+        extra_message = f"⚠️ User marked Phishing but Google says Safe — logged for review."
+
+    elif google_unavailable:
+        extra_message = "ℹ️ Google verification unavailable — feedback saved for manual review."
+
+    # Always log the feedback
     record = {
         'timestamp_utc': datetime.utcnow().isoformat(timespec='seconds') + 'Z',
         'url': parsed.geturl(),
         'normalized_domain': normalized_domain,
         'user_label': user_label,
-        'model_prediction': str(data.get('model_prediction', '')).strip(),
-        'model_confidence': data.get('model_confidence'),
-        'is_known_domain': bool(data.get('is_known_domain', False)),
-        'model_uncertain': bool(data.get('model_uncertain', False)),
+        'google_verified': google_says_safe or google_says_malicious,
+        'google_says_safe': google_says_safe,
+        'google_says_malicious': google_says_malicious,
+        'whitelist_added': whitelist_added,
         'note': note[:600],
         'source': 'ui-feedback'
     }
 
     append_feedback_record(record)
-    return jsonify({'ok': True, 'message': 'Feedback saved for review pipeline.'})
 
+    return jsonify({
+        'ok': True,
+        'message': extra_message or 'Feedback saved for review pipeline.',
+        'whitelist_added': whitelist_added
+    })
 if __name__ == '__main__':
     print("Starting Flask app on all network interfaces...")
     app.run(host='0.0.0.0', port=5000, debug=True)
