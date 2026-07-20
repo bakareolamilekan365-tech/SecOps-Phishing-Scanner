@@ -8,3 +8,4 @@ gunicorn
 xgboost
 python-Levenshtein
 python-whois
+tldextract

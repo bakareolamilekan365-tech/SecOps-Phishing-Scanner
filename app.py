@@ -8,12 +8,33 @@ import requests
 import re
 import socket
 import logging
+import tldextract
 from datetime import datetime
 import Levenshtein
 from urllib.parse import urlparse
 from feature_extractor import extract_features
 
 app = Flask(__name__)
+# ---------- Domain Normalization ----------
+def normalize_domain(url):
+    """
+    Extract the registrable domain from a URL.
+    Examples:
+        https://remita.net            -> remita.net
+        https://remita.com.ng/login   -> remita.com.ng
+        http://www.google.com         -> google.com
+    """
+    try:
+        extracted = tldextract.extract(url)
+        if not extracted.suffix:
+            from urllib.parse import urlparse
+            netloc = urlparse(url).netloc
+            return netloc or url
+        return f"{extracted.domain}.{extracted.suffix}"
+    except Exception:
+        from urllib.parse import urlparse
+        netloc = urlparse(url).netloc
+        return netloc or url
 
 # Ensure logs dir
 os.makedirs('logs', exist_ok=True)
