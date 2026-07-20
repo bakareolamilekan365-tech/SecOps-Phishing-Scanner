@@ -9,3 +9,4 @@ xgboost
 python-Levenshtein
 python-whois
 tldextract
+python-dotenv
