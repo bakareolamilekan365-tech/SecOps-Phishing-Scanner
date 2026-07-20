@@ -47,12 +47,11 @@ WHITELIST_LOG = "logs/whitelist_changes.log"
 
 
 def resolve_domain(base):
-    """
-    Try common TLDs for a given base string (no dots) using concurrent DNS lookups.
-    Returns the first domain that resolves, or None if none work.
-    """
-    tlds = ['.com', '.org', '.net', '.edu', '.int', '.gov', '.ng']
-    socket.setdefaulttimeout(0.5)  # each lookup times out after 0.5s
+    tlds = [
+        '.edu.ng', '.edu', '.ac.uk', '.co.uk', '.org', '.com', '.net',
+        '.int', '.gov', '.ng', '.io', '.app', '.dev', '.co'
+    ]
+    socket.setdefaulttimeout(0.5)
 
     def try_resolve(domain):
         try:
