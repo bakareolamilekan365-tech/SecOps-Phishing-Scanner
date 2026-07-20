@@ -292,37 +292,57 @@ document.addEventListener("DOMContentLoaded", () => {
     feedbackStatus.className = "text-xs mt-2 text-slate-400";
 
     const payload = {
-      url: latestScanData.normalized_url || urlInput.value.trim(),
-      user_label: userLabel,
-      note: feedbackNote.value.trim(),
-      model_prediction: latestScanData.prediction,
-      model_confidence: latestScanData.confidence,
-      is_known_domain: latestScanData.is_known_domain,
-      model_uncertain: latestScanData.model_uncertain,
+        url: latestScanData.normalized_url || urlInput.value.trim(),
+        user_label: userLabel,
+        note: feedbackNote.value.trim(),
+        model_prediction: latestScanData.prediction,
+        model_confidence: latestScanData.confidence,
+        is_known_domain: latestScanData.is_known_domain,
+        model_uncertain: latestScanData.model_uncertain,
     };
 
     try {
-      const response = await fetch("/feedback", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const result = await response.json();
+        const response = await fetch("/feedback", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+        });
+        const result = await response.json();
 
-      if (!response.ok) {
-        throw new Error(result.error || "Unable to save feedback.");
-      }
+        if (!response.ok) {
+            throw new Error(result.error || "Unable to save feedback.");
+        }
 
-      feedbackStatus.textContent =
-        "Thanks. Your feedback was queued for review.";
-      feedbackStatus.className = "text-xs mt-2 text-green-400";
+        // Show the message from backend
+        if (result.message) {
+            feedbackStatus.textContent = result.message;
+            // Color code based on content
+            if (result.message.includes("added to whitelist")) {
+                feedbackStatus.className = "text-xs mt-2 text-green-400";
+            } else if (result.message.includes("already whitelisted")) {
+                feedbackStatus.className = "text-xs mt-2 text-blue-400";
+            } else if (result.message.includes("⚠️")) {
+                feedbackStatus.className = "text-xs mt-2 text-amber-400";
+            } else {
+                feedbackStatus.className = "text-xs mt-2 text-slate-400";
+            }
+        } else {
+            feedbackStatus.textContent = "✅ Thank you! Feedback saved.";
+            feedbackStatus.className = "text-xs mt-2 text-green-400";
+        }
+
+        // If domain was added to whitelist, re-scan to show updated UI
+        if (result.whitelist_added) {
+            setTimeout(() => {
+                scanBtn.click();
+            }, 1500);
+        }
+
     } catch (err) {
-      feedbackStatus.textContent =
-        err.message || "Feedback failed to save. Please try again.";
-      feedbackStatus.className = "text-xs mt-2 text-red-400";
+        feedbackStatus.textContent = err.message || "Feedback failed to save. Please try again.";
+        feedbackStatus.className = "text-xs mt-2 text-red-400";
     }
-  }
-
+}
   feedbackSafeBtn.addEventListener("click", () => submitFeedback("safe"));
   feedbackPhishBtn.addEventListener("click", () => submitFeedback("phishing"));
 
