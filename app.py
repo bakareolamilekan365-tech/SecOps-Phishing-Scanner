@@ -9,6 +9,8 @@ import re
 import socket
 import logging
 import tldextract
+import time
+import random
 from datetime import datetime
 import Levenshtein
 from urllib.parse import urlparse
@@ -90,7 +92,7 @@ KNOWN_BRANDS = {
     'facebook': 'https://facebook.com', 'instagram': 'https://instagram.com', 'twitter': 'https://twitter.com',
     'linkedin': 'https://linkedin.com', 'github': 'https://github.com', 'coinbase': 'https://coinbase.com',
     'whatsapp': 'https://whatsapp.com', 'tiktok': 'https://tiktok.com', 'twitch': 'https://twitch.tv', 'reddit': 'https://reddit.com', 'meta': 'https://meta.com',
-    'chowdeck': 'https://chowdeck.com', 'paystack': 'https://paystack.com', 'jumia': 'https://jumia.com',
+    'chowdeck': 'https://chowdeck.com', 'paystack': 'https://paystack.com','remita': 'https://remita.net', 'jumia': 'https://jumia.com',
     'kuda': 'https://kuda.com', 'flutterwave': 'https://flutterwave.com', 'opay': 'https://opayweb.com',
     'moniepoint': 'https://moniepoint.com', 'chippercash': 'https://chippercash.com', 'konga': 'https://konga.com',
     'shopee': 'https://shopee.com', 'flipkart': 'https://flipkart.com', 'lazada': 'https://lazada.com',
@@ -164,7 +166,7 @@ BRAND_DISPLAY_NAMES = {
     'stanbicibtc': 'Stanbic IBTC', 'fidelitybank': 'Fidelity Bank', 'standardbank': 'Standard Bank',
     'capitecbank': 'Capitec Bank', 'aljazeera': 'Al Jazeera', 'nytimes': 'The New York Times',
     'showmax': 'Showmax', 'paypal': 'PayPal', 'moniepoint': 'Moniepoint', 'ecobank': 'EcoBank', 'behance': 'Behance',     'punch': 'Punch',
-    'vanguard': 'Vanguard',
+    'vanguard': 'Vanguard','remita': 'Remita',
     'legit': 'Legit.ng',
     'bellanaija': 'BellaNaija',
     'pulse': 'Pulse',
@@ -305,6 +307,9 @@ def predict():
         normalized = normalize_domain(raw_url)
         if normalized in whitelist:
             app.logger.info(f"Whitelist hit: {raw_url} -> {normalized}")
+
+            # Simulate ML processing time (0.5–1.5 seconds)
+            time.sleep(random.uniform(0.5, 1.5))
             
             # Build a rich response like a normal Safe verdict
             ext = tldextract.extract(raw_url)
