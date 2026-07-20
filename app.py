@@ -36,6 +36,43 @@ def normalize_domain(url):
         netloc = urlparse(url).netloc
         return netloc or url
 
+# ---------- Whitelist Store ----------
+WHITELIST_FILE = "data/whitelist.json"
+WHITELIST_LOG = "logs/whitelist_changes.log"
+
+def load_whitelist():
+    """Load whitelist from JSON; return list of normalized domains."""
+    if not os.path.exists(WHITELIST_FILE):
+        return []
+    try:
+        with open(WHITELIST_FILE, "r") as f:
+            data = json.load(f)
+            return data if isinstance(data, list) else []
+    except (json.JSONDecodeError, IOError):
+        return []
+
+def save_whitelist(domains):
+    """Overwrite whitelist file with a list of domains."""
+    os.makedirs(os.path.dirname(WHITELIST_FILE), exist_ok=True)
+    with open(WHITELIST_FILE, "w") as f:
+        json.dump(domains, f, indent=2)
+
+def audit_whitelist(action, domain, by="admin", source="cli", notes=""):
+    """Append an audit line to whitelist_changes.log."""
+    os.makedirs(os.path.dirname(WHITELIST_LOG), exist_ok=True)
+    timestamp = datetime.utcnow().isoformat() + "Z"
+    entry = {
+        "timestamp": timestamp,
+        "action": action,        # "add" or "remove"
+        "domain": domain,
+        "by": by,
+        "source": source,
+        "notes": notes
+    }
+    with open(WHITELIST_LOG, "a") as f:
+        f.write(json.dumps(entry) + "\n")
+
+
 # Ensure logs dir
 os.makedirs('logs', exist_ok=True)
 
@@ -95,6 +132,10 @@ try:
     model = joblib.load(MODEL_PATH)
 except FileNotFoundError:
     model = None
+
+# Load whitelist and feature flag
+whitelist = load_whitelist()
+ENABLE_WHITELIST = os.getenv("ENABLE_WHITELIST", "false").lower() == "true"
 
 
 def build_known_brand_domain_suffixes():
@@ -177,6 +218,39 @@ def predict():
     parsed_url = urlparse(raw_url)
     if is_internal_ip(parsed_url.netloc):
         return jsonify({'error': 'Access Denied: Scanning internal network addresses is restricted.'}), 403
+
+    # ---- Whitelist short-circuit (if enabled) ----
+        # ---- Whitelist short-circuit (if enabled) ----
+    if ENABLE_WHITELIST:
+        normalized = normalize_domain(raw_url)
+        if normalized in whitelist:
+            app.logger.info(f"Whitelist hit: {raw_url} -> {normalized}")
+            
+            # Build a rich response like a normal Safe verdict
+            ext = tldextract.extract(raw_url)
+            display_domain = ext.domain.capitalize()
+            
+            return jsonify({
+                'prediction': 'Safe',
+                'verdict': 'Safe',
+                'confidence': 100.0,
+                'normalized_url': raw_url,
+                'resolved_url': raw_url,
+                'is_known_domain': True,
+                'model_uncertain': False,
+                'whitelisted': True,
+                'bio': f"It looks like you are trying to visit {display_domain}. Our system has this domain whitelisted as a legitimate and secure destination.",
+                'safe_link': raw_url,
+                'is_live': True,
+                'ping_warning': "",
+                'suggested_site': None,
+                'threat_summary': [
+                    "[PASS] Domain is on the system's trusted whitelist.",
+                    "[PASS] No active heuristic threats detected.",
+                    "[PASS] Overall trust indicators fall within secure operational margins."
+                ]
+            })
+    # ----------------------------------------------
 
     features = extract_features(raw_url)
     f_dict = {

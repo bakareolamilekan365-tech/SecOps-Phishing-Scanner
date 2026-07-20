@@ -194,9 +194,11 @@ document.addEventListener("DOMContentLoaded", () => {
       suggestionBox.classList.add("hidden");
     }
 
-    const isPhishing = data.prediction === "Phishing";
-    const isCaution = data.prediction === "Caution";
-    predictionText.textContent = data.prediction;
+    // Use 'verdict' if available, otherwise fall back to 'prediction'
+    const verdict = data.verdict || data.prediction || "Unknown";
+    const isPhishing = verdict === "Phishing";
+    const isCaution = verdict === "Caution";
+    predictionText.textContent = verdict;
     confidenceText.textContent = `Confidence: ${data.confidence}%`;
 
     predictionText.className =
@@ -264,7 +266,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     renderDoughnutChart(data.prediction, data.confidence);
 
-    const shouldRequestFeedback = data.model_uncertain || !data.is_known_domain;
+    const shouldRequestFeedback =
+      !data.whitelisted && (data.model_uncertain || !data.is_known_domain);
     if (shouldRequestFeedback) {
       feedbackPanel.classList.remove("hidden");
       feedbackStatus.textContent = "";
