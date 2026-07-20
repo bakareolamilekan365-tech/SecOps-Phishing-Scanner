@@ -44,6 +44,31 @@ def normalize_domain(url):
 WHITELIST_FILE = "data/whitelist.json"
 WHITELIST_LOG = "logs/whitelist_changes.log"
 
+def check_safe_browsing(url):
+    """Return True if URL is safe, False if malicious, None if API error."""
+    api_key = os.getenv('GOOGLE_SAFE_BROWSING_KEY')
+    if not api_key:
+        return None
+    
+    endpoint = f"https://safebrowsing.googleapis.com/v4/threatMatches:find?key={api_key}"
+    payload = {
+        "client": {"clientId": "secops-scanner", "clientVersion": "1.0"},
+        "threatInfo": {
+            "threatTypes": ["MALWARE", "SOCIAL_ENGINEERING", "UNWANTED_SOFTWARE"],
+            "platformTypes": ["ANY_PLATFORM"],
+            "threatEntryTypes": ["URL"],
+            "threatEntries": [{"url": url}]
+        }
+    }
+    
+    try:
+        r = requests.post(endpoint, json=payload, timeout=5)
+        if r.status_code == 200:
+            return 'matches' not in r.json()
+        return None
+    except:
+        return None
+    
 def load_whitelist():
     """Load whitelist from JSON; return list of normalized domains."""
     if not os.path.exists(WHITELIST_FILE):
@@ -355,6 +380,7 @@ def predict():
         is_whitelisted = True
 
     is_live = False
+    http_ok = False
     resolved_url = raw_url
     ping_warning = ""
     is_parked = False
@@ -365,6 +391,7 @@ def predict():
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'}
         r = requests.get(raw_url, headers=headers, timeout=5, allow_redirects=True, stream=True)
         is_live = True
+        http_ok = r.status_code < 400
         
         # Parked checks should rely on explicit indicators to avoid false positives.
         first_chunk = next(r.iter_content(2048), b'')
@@ -426,6 +453,7 @@ def predict():
     features_array = np.array(features).reshape(1, -1)
     prediction_num = model.predict(features_array)[0]
     probabilities = model.predict_proba(features_array)[0]
+    top_probability = float(np.max(probabilities))
 
     # --- FIXED OVERRIDES ---
     forced_override = False
@@ -473,11 +501,26 @@ def predict():
         forced_override = True
         # Keep model's natural probability distribution
     elif prediction_num == 1:
-        status = "Phishing"
+        # Google Safe Browsing override
+        safe = check_safe_browsing(raw_url)
+        if safe is True and is_live and not ping_warning and not is_parked and http_ok:
+            status = "Safe"
+            forced_override = True
+            threat_summary = [
+                "[PASS] Verified safe by Google Safe Browsing.",
+                "[PASS] Domain is live and appears legitimate."
+            ]
+        else:
+            # fallback to your existing confidence logic
+            if top_probability > 0.80:
+                status = "Phishing"
+            else:
+                status = "Caution"
+                forced_override = True
+
     # For Safe predictions with no overrides, use natural model probabilities
 
     # If the model is uncertain, force a caution verdict for safer UX.
-    top_probability = float(np.max(probabilities))
     if not forced_override and top_probability <= 0.60:
         status = "Caution"
 
@@ -554,12 +597,17 @@ def feedback():
         return jsonify({'error': 'Feedback rejected: label must be safe or phishing.'}), 400
 
     parsed = urlparse(raw_url if raw_url.startswith(('http://', 'https://')) else f'https://{raw_url}')
-    domain_key = tldextract.extract(parsed.geturl()).domain.lower().replace('-', '')
+    
+    # Use normalize_domain() with fallback
+    try:
+        normalized_domain = normalize_domain(parsed.geturl())
+    except Exception:
+        normalized_domain = tldextract.extract(parsed.geturl()).domain.lower().replace('-', '')
 
     record = {
         'timestamp_utc': datetime.utcnow().isoformat(timespec='seconds') + 'Z',
         'url': parsed.geturl(),
-        'domain_key': domain_key,
+        'normalized_domain': normalized_domain,
         'user_label': user_label,
         'model_prediction': str(data.get('model_prediction', '')).strip(),
         'model_confidence': data.get('model_confidence'),
