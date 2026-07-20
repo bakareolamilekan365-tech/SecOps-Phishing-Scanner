@@ -11,6 +11,8 @@ import logging
 import tldextract
 import time
 import random
+from dotenv import load_dotenv
+load_dotenv()
 from datetime import datetime
 import Levenshtein
 from urllib.parse import urlparse
