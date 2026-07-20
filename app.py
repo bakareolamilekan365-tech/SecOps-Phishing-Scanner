@@ -47,27 +47,27 @@ WHITELIST_LOG = "logs/whitelist_changes.log"
 
 
 def resolve_domain(base):
+    """
+    Check TLDs in priority order (sequential).
+    Returns the first domain that resolves, or None.
+    """
+    socket.setdefaulttimeout(1.0)  # 1 second per lookup
+    
+    # Priority order: educational/government first, then commercial
     tlds = [
-        '.edu.ng', '.edu', '.ac.uk', '.co.uk', '.org', '.com', '.net',
-        '.int', '.gov', '.ng', '.io', '.app', '.dev', '.co'
+        '.edu.ng', '.edu', '.ac.uk', '.co.uk', '.org', 
+        '.com', '.net', '.int', '.gov', '.ng'
     ]
-    socket.setdefaulttimeout(0.5)
-
-    def try_resolve(domain):
+    
+    for tld in tlds:
+        test_domain = base + tld
         try:
-            socket.gethostbyname(domain)
-            return domain
+            socket.gethostbyname(test_domain)
+            return test_domain  # Resolved → return immediately
         except socket.error:
-            return None
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=len(tlds)) as executor:
-        futures = {executor.submit(try_resolve, base + tld): base + tld for tld in tlds}
-        for future in concurrent.futures.as_completed(futures, timeout=2.0):
-            result = future.result()
-            if result is not None:
-                return result
-
-    return None
+            continue  # Try next TLD
+    
+    return None  # None resolved
 
 def check_safe_browsing(url):
     """Return True if URL is safe, False if malicious, None if API error."""
